@@ -1,0 +1,105 @@
+---
+title: "Machine Learning - Model Selection"
+author: "Aziz Mohammed"
+date: "August 20, 2018"
+output: html_document
+---
+# Executive Summary
+
+This report summarizes the results from modeling how well a group of exercise enthusiats do based on data from accelerometers that are attached to thier belts, forearms, arms and dumbbells. The "classe" variable in the training dataset classifies the manner of their exercises  into 5 groups of A, B, C, D and E. A classification model is developed to associate the "classe" variabble with the rest of the predictor variables in the training set. A random forest clustering algorithm is chosen to fit the model. Before fitting the model, the relevant variables are  reduced from a total of 160 to just 53.The model is found to achiever an accuracy of 95%. The model fit is tested to predict on 20 test cases.The prediction is found to achieve 20 out of 20 predictions correctly.
+
+
+## Expoloratory Analysis
+
+The required data files were downloaded and saved in data frame format after naming them as  training and testing files. Investigation of the data in these  files shows that the variables in columns 1 to 7 are superfulous for the required analysis. In additon running the R command  
+
+colSums(is.na(training/testing))  
+
+shows that there are excessive amount of NA values. Variables with more than 75% of their entries as NA are dropped from the data sets. Also needed was to drop variables with near zero variances using the R commands:  
+
+testing_clean <- testing[,-c(nearZeroVar(training), 1:7)]
+training_clean <- training[,-c(nearZeroVar(training), 1:7)]  
+
+
+```{r data cleaning, echo=TRUE, include=TRUE, cache=TRUE}
+library(caret)
+library(ggplot2)
+library(lattice)
+fileurl1 <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+fileurl2 <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+download.file(fileurl1, destfile = "./pml-training.csv")
+download.file(fileurl2, destfile = "./pml-testing.csv")
+training <- read.csv("pml-training.csv")
+testing <- read.csv("pml-testing.csv")
+testing_clean <- testing[,-c(nearZeroVar(training), 1:7)]
+training_clean <- training[,-c(nearZeroVar(training), 1:7)]
+ftraining <- training_clean[ ,-which(colSums(is.na(training_clean)) > nrow(training_clean)/2)]
+ftesting <- testing_clean[ ,-which(colSums(is.na(testing_clean)) > nrow(testing_clean)/2)]
+```
+
+
+## Model Selection
+
+After cleaning up the data, final training (ftraining : 19622 x 53) and final testing (ftesting: 20 x 53) are created. The model fitting and prediction analysis are built on these data sets.To get a sense of the data distribution, we created plots of roll_belt vs.roll_dumbbell/roll_forearm, pitch_belt vs. pitch_arm/pitch_forearm and yaw_belt vs yaw_forearm graphs with the factor variable "classe" as classifier. The 5 grapshs in the appendix show the raw data clustering for selected predictor variables using the classe" variable as a clustering pivot. We choose to use the random forest modeling algorithm to fit the model.
+
+ 
+```{r model selection code, echo= TRUE, cache=TRUE}
+rfmodfit <- train(classe ~ ., data = ftraining, method = "rf", trControl = 
+                    trainControl(method ="cv", number = 10))
+```
+
+We used the train function from the caret package to fit the model. Crtical arguments for the train function are needed. These arguments are the method for cross validation and the number of  folds. We picked 10 as the number of folds for cross validation. The model fit has an accuracy of 99.5%.  
+
+```{r model accuracy, echo = TRUE}
+print(rfmodfit)
+```
+
+## Results of Predictions
+
+The model built in this paper is applied for the 20 test cases given as a quiz. The final testing data is created in a similar fashion as the final training data. It is found that the prediction was correct for 20 out of 20 test cases.  
+
+```{r predciton, echo=TRUE, include=TRUE}
+case1pred <- predict(rfmodfit, ftesting[1, ])
+case2pred <- predict(rfmodfit, ftesting[2, ])
+print(case1pred)
+print(case2pred)
+```
+
+
+
+
+
+
+# Appendix
+
+preliminary plots to check the distribution of some variables in the training data set.
+plot of roll_belt vs. roll_dumbbell
+
+```{r Figure 1, echo=TRUE, include=TRUE}
+library(ggplot2)
+qplot(roll_belt,roll_dumbbell, colour = classe,data= ftraining)
+```
+
+plot of roll_belt vs. roll_forearm
+
+```{r Figure 2, echo = TRUE, include=FALSE}
+qplot(roll_belt,roll_forearm, colour = classe,data= ftraining)
+```
+
+plot of pitch_belt vs. pitch_arm
+
+```{r Figure 3, echo = TRUE, include = FALSE}
+qplot(pitch_belt,pitch_arm, colour = classe,data= ftraining)
+```
+plot of pitch_belt vs. pitch_forearm
+
+```{r Figure 4, echo = TRUE, include = FALSE}
+qplot(pitch_belt,pitch_forearm, colour = classe,data= ftraining)
+```
+plot of roll_belt vs. roll_forearm
+
+```{r Figure 5, echo = TRUE, include = FALSE}
+qplot(yaw_belt, yaw_forearm, colour = classe,data= ftraining)
+```
+
+
